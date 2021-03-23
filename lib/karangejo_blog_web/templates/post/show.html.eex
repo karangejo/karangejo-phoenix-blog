@@ -1,0 +1,6 @@
+<div class="row" style="margin-bottom: 10px;">
+    <img src="/images/celtic/celtic13.png" alt="celtic symbol" class="celtic-image">
+    <h1><%= @post.name %></h1>
+    <img src="/images/celtic/celtic16.png" alt="celtic symbol" class="celtic-image">
+</div>
+<%= to_markdown(@post.content) %>

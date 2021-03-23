@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Karangejo</title>
+    <link rel="stylesheet" href="<%= Routes.static_path(@conn, "/css/app.css") %>"/>
+    <script defer type="text/javascript" src="<%= Routes.static_path(@conn, "/js/app.js") %>"></script>
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Berkshire+Swash&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Blinker:wght@300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.6.0/styles/idea.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.6.0/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
+  </head>
+  <body>
+    <header >
+    <div class="row rain">
+      <img src="/images/boats/boat-2027444.png" alt="sailboat" class="sail-boat">
+      <div class="column" style="margin-top: 3vh">
+          <h1 class="main-header">Karangejo</h1>
+          <%= raw(crab_svg()) %>
+          <div class="row" style="padding: 15px">
+            <%= link "Blog", to: Routes.post_path(@conn, :index), class: "nav-link" %> |
+            <%= link "About", to: Routes.post_path(@conn, :about), class: "nav-link" %> |
+            <%= link "Music", to: Routes.post_path(@conn, :music), class: "nav-link" %>
+          </div>
+      </div>
+      <img src="/images/boats/ship-37589.png" alt="sailboat" class="sail-boat">
+    </div>
+    </header>
+    <main role="main" class="container">
+      <div class="column">
+       <div class="row">
+        <div class="column-content">
+          <p class="alert alert-info" role="alert"><%= get_flash(@conn, :info) %></p>
+          <p class="alert alert-danger" role="alert"><%= get_flash(@conn, :error) %></p>
+          <%= @inner_content %>
+        </div>
+       </div>
+      </div>
+    </main>
+  </body>
+</html>

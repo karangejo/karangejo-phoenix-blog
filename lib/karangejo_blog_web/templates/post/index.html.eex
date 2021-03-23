@@ -1,0 +1,8 @@
+<div class="row">
+    <img src="/images/celtic/celtic5.png" alt="celtic symbol" class="dec-image">
+    <h1>Posts</h1>
+    <img src="/images/celtic/celtic9.png" alt="celtic symbol" class="dec-image">
+</div>
+<%= for post <- @posts do %>
+        <%= link post.name, to: Routes.post_path(@conn, :show, post) %>
+<% end %>
