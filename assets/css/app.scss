@@ -93,9 +93,11 @@ header {
   transition: background 1s ease;
   background: linear-gradient(
     0deg,
-    rgba(143, 178, 213, 1) 0%,
-    rgba(201, 246, 208, 1) 53%,
-    rgb(228, 148, 148) 100%
+    rgba(46, 139, 232, 1) 0%,
+    rgba(204, 244, 221, 1) 53%,
+    rgba(228, 148, 148, 1) 79%,
+    rgba(255, 232, 163, 1) 91%,
+    rgba(163, 219, 255, 1) 100%
   );
   background-size: cover;
   background-repeat: no-repeat;
@@ -104,8 +106,8 @@ header:hover {
   background: url(/images/stars.png),
     linear-gradient(
       0deg,
-      rgba(143, 178, 213, 1) 0%,
-      rgba(201, 246, 208, 1) 53%,
+      rgba(46, 139, 232, 1) 0%,
+      rgba(204, 244, 221, 1) 53%,
       rgb(30, 24, 43) 100%
     );
 }
