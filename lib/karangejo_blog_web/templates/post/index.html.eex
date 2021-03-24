@@ -6,3 +6,7 @@
 <%= for post <- @posts do %>
         <%= link post.name, to: Routes.post_path(@conn, :show, post) %>
 <% end %>
+<div class="row">
+    <img src="/images/boats/boat-2027190.png" alt="sailboat" class="sail-boat">
+</div>
+<div class="row">&copy Karangejo</div>

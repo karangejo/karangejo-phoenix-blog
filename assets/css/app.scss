@@ -38,6 +38,11 @@ svg {
   width: 20%;
 }
 
+.about-content {
+  font-size: large;
+  font-weight: bold;
+}
+
 .column {
   display: flex;
   flex-direction: column;
@@ -178,6 +183,11 @@ img {
   @media (max-width: 500px) {
     display: none;
   }
+}
+
+.blog-boat {
+  width: 15vw;
+  height: auto;
 }
 
 .rain:hover .sun {

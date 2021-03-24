@@ -4,3 +4,7 @@
     <img src="/images/celtic/celtic16.png" alt="celtic symbol" class="celtic-image">
 </div>
 <%= to_markdown(@post.content) %>
+<div class="row">
+    <img src="/images/boats/ship-309618.png" alt="sailboat" class="blog-boat">
+</div>
+<div class="row">&copy Karangejo</div>
