@@ -1,4 +1,7 @@
 defmodule KarangejoBlog.Release do
+      alias KarangejoBlog.Posts.Post
+      alias KarangejoBlog.Repo
+  
       @app :karangejo_blog 
       
       def migrate do
@@ -8,23 +11,9 @@ defmodule KarangejoBlog.Release do
       end
 
       def insert_posts do 
-            files =
-                  Application.app_dir(:karangejo_blog, "priv/repo/markdown/*.md") 
-                  |> Path.wildcard
-                  
-            Enum.map(files, fn file ->
-                  case File.read(file) do
-                    {:ok, content} ->
-                      post_name =
-                        Path.basename(file)
-                        |> String.replace(".md","")
-                        |> String.replace("_"," ")
-                      
-                      Repo.insert!(%Post{name: post_name, content: content})
-                    _ ->
-                      IO.puts("could not insert file : " ++ file)
-                  end
-            end)
+            Application.app_dir(:karangejo_blog, "priv/repo/seeds.exs")
+            |> Code.eval_file()
+       
       end
 
       def rollback(repo, version) do
