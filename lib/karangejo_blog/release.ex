@@ -17,7 +17,7 @@ defmodule KarangejoBlog.Release do
 
       defp eval_seed(repo) do
             Application.app_dir(:karangejo_blog, "priv/repo/seeds.exs")
-            |>  Code.eval_file(seeds_file)
+            |> Code.eval_file()
       end
 
       def rollback(repo, version) do
