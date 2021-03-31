@@ -61,6 +61,14 @@ svg {
   justify-content: center;
   padding-left: 10px;
   padding-right: 5px;
+  margin-bottom: 20px;
+  padding-top: 20px;
+}
+
+.row-content {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
 }
 
 a {
@@ -178,8 +186,9 @@ img {
 
 .sail-boat {
   width: 12vw;
+  height: auto;
   margin: 4vw;
-  @media (max-width: 500px) {
+  @media (max-width: 700px) {
     display: none;
   }
 }
@@ -187,6 +196,9 @@ img {
 .blog-boat {
   width: 15vw;
   height: auto;
+  @media (max-width: 700px) {
+    display: none;
+  }
 }
 
 .rain:hover .sun {

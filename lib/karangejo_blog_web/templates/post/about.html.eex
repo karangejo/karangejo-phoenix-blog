@@ -1,21 +1,10 @@
 <div class="row">
-    <img src="/images/celtic/celtic12.png" alt="celtic symbol" class="dec-image">
-    <h1>About</h1>
-    <img src="/images/celtic/celtic20.png" alt="celtic symbol" class="dec-image">
-</div>
-<div class="row">
     <img src="/images/celtic/celtic11.png" alt="celtic symbol" class="celtic-image">
     <h1>Gabriel Gras</h1>
     <img src="/images/celtic/celtic17.png" alt="celtic symbol" class="celtic-image">
 </div>
 <p class="about-content" >I'm a fullstack web developer based in Taiwan. I work with React, Node, .Net, Elixir and Python. I love functional programming, machine learning and trying out new technologies. When I am not writing software I enjoy surfing, sailing, kitesurfing and just hanging out at the beach. I am also a performing musician / music producer and live coder.</p>
-<div class="row">
-    <img src="/images/celtic/celtic1.png" alt="celtic symbol" class="dec-image">
-    <h2>Info</h2>
-    <img src="/images/celtic/celtic3.png" alt="celtic symbol" class="dec-image">
-</div>
 <p class="about-content">You can <a href="mailto:gabriel.g.gras@gmail.com">email</a> me if you have any questions or want to request a free consultation. Feel free to check out my code on <a href="https://github.com/karangejo">github</a>. If you are live in Taiwan and surf you can check out my site <a href="https://taiwanbuoys.com">taiwan buoys</a>.</p>
 <div class="row">
     <img src="/images/boats/ship-37589.png" alt="sailboat" class="sail-boat">
 </div>
-<div class="row">&copy Karangejo</div>
