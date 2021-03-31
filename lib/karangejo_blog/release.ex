@@ -7,10 +7,11 @@ defmodule KarangejoBlog.Release do
       def migrate do
             for repo <- repos() do
                   {:ok, _, _} = Ecto.Migrator.with_repo(repo, &Ecto.Migrator.run(&1, :up, all: true))
+                  insert_posts(repo)
             end
       end
 
-      def insert_posts do 
+      def insert_posts(repo) do 
             Ecto.Migrator.with_repo(repo, &eval_seed(&1))       
       end
 
