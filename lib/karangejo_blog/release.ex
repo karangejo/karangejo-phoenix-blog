@@ -11,9 +11,12 @@ defmodule KarangejoBlog.Release do
       end
 
       def insert_posts do 
+            Ecto.Migrator.with_repo(repo, &eval_seed(&1))       
+      end
+
+      defp eval_seed(repo) do
             Application.app_dir(:karangejo_blog, "priv/repo/seeds.exs")
-            |> Code.eval_file()
-       
+            |>  Code.eval_file(seeds_file)
       end
 
       def rollback(repo, version) do
