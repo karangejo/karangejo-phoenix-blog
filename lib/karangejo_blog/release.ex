@@ -1,9 +1,7 @@
 defmodule KarangejoBlog.Release do
-      alias KarangejoBlog.Posts.Post
-      alias KarangejoBlog.Repo
-  
-      @app :karangejo_blog 
-      
+
+      @app :karangejo_blog
+
       def migrate do
             for repo <- repos() do
                   {:ok, _, _} = Ecto.Migrator.with_repo(repo, &Ecto.Migrator.run(&1, :up, all: true))
@@ -11,11 +9,11 @@ defmodule KarangejoBlog.Release do
             end
       end
 
-      def insert_posts(repo) do 
-            Ecto.Migrator.with_repo(repo, &eval_seed(&1))       
+      def insert_posts(repo) do
+            Ecto.Migrator.with_repo(repo, &eval_seed(&1))
       end
 
-      defp eval_seed(repo) do
+      defp eval_seed(_repo) do
             Application.app_dir(:karangejo_blog, "priv/repo/seeds.exs")
             |> Code.eval_file()
       end
