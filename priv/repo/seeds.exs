@@ -13,6 +13,8 @@
 alias KarangejoBlog.Posts.Post
 alias KarangejoBlog.Repo
 
+Repo.delete_all(Post)
+
 files = Path.wildcard("./priv/repo/markdown/*.md")
 IO.inspect(System.cwd())
 IO.inspect(files)
