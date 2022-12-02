@@ -5,7 +5,7 @@
 # is restricted to this project.
 
 # General application configuration
-use Mix.Config
+import Config
 
 config :karangejo_blog,
   ecto_repos: [KarangejoBlog.Repo]
