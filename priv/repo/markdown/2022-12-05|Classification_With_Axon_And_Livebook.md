@@ -1,0 +1,509 @@
+## Install Dependencies 
+
+```elixir
+Mix.install([
+  {:axon, "~> 0.1.0"},
+  {:exla, "~> 0.2.2"},
+  {:nx, "~> 0.2.1"},
+  {:explorer, "~> 0.2.0"},
+  {:req, "~> 0.3.0"},
+  {:vega_lite, "~> 0.1.5"},
+  {:kino_vega_lite, "~> 0.1.1"}
+])
+```
+
+## Introduction
+
+In this notebook we are going to be exploring the Glass type dataset. This dataset is from the UCI repository. It was motivated by a criminal case where identification of a certain type of glass fragment was crucial. You can read more about the dataset [here](https://archive.ics.uci.edu/ml/datasets/glass+identification)
+
+First we will load the data into `Explorer` and take a look. Then we will use `Nx` to prepare our data for training and testing. Finally we will use `Axon` to build a Neural Network and train it with the dataset. Along the way we will plot some charts with `VegaLite`.
+
+It is a multiclass classification problem with 7 classes labeled from 1 to 7. All the other input variables are numeric.
+
+## Load the Dataset
+
+First lets download the data to our machine and then load it into `Explorer`. We will append the column names to the csv so we can use them in the dataframe.
+
+```elixir
+%{body: body} =
+  Req.get!("https://archive.ics.uci.edu/ml/machine-learning-databases/glass/glass.data")
+
+filename = "glass_data.csv"
+column_names = "id_number,RI,Na,Mg,Al,Si,K,Ca,Ba,Fe,class\n"
+
+File.write!(filename, column_names <> body)
+
+df = Explorer.DataFrame.from_csv!(filename)
+```
+
+Now we can explore the dataset to see what is inside
+
+```elixir
+Explorer.DataFrame.pull(df, "class")
+|> Explorer.Series.distinct()
+```
+
+Looks like there are no instances of class 4! Lets build a look up table so we can get the names of the classes from the numbers.
+
+```elixir
+classes = %{
+  1 => "building_windows_float_processed",
+  2 => "building_windows_non_float_processed",
+  3 => "vehicle_windows_float_processed",
+  4 => "vehicle_windows_non_float_processed",
+  5 => "containers",
+  6 => "tableware",
+  7 => "headlamps"
+}
+```
+
+```elixir
+Explorer.DataFrame.n_rows(df)
+```
+
+Let's calculate the mean of every column and plot it out.
+
+```elixir
+defmodule ReduceData do
+  def reduce_df(data_frame, series_fun) do
+    data_frame
+    |> Explorer.DataFrame.to_series()
+    |> Enum.map(fn {col_name, col} ->
+      %{"x" => col_name, "y" => series_fun.(col)}
+    end)
+  end
+end
+
+mean_data =
+  ReduceData.reduce_df(
+    df
+    |> Explorer.DataFrame.select(["id_number", "class"], :drop),
+    &Explorer.Series.mean/1
+  )
+```
+
+```elixir
+VegaLite.new(width: 400, height: 400)
+|> VegaLite.data_from_values(mean_data)
+|> VegaLite.mark(:bar)
+|> VegaLite.encode_field(:x, "x", type: :nominal)
+|> VegaLite.encode_field(:y, "y", type: :quantitative)
+```
+
+Now lets group the data by class and calculate the mean max and min value for each column
+
+```elixir
+class_grouped_df = Explorer.DataFrame.group_by(df, ["class"])
+```
+
+```elixir
+cols = ["Al", "Ba", "Ca", "Fe", "K", "Mg", "Na", "RI", "Si"]
+
+class_summary_df =
+  Explorer.DataFrame.summarise(
+    class_grouped_df,
+    cols
+    |> Enum.reduce(%{}, fn name, acc ->
+      acc
+      |> Map.put(name, [:min, :max, :mean])
+    end)
+  )
+```
+
+Nice! Now lets plot out the chart for each group with `VegaLite`
+
+```elixir
+vega_concats =
+  class_summary_df
+  |> Explorer.DataFrame.to_rows()
+  |> Enum.map(fn row ->
+    data =
+      row
+      |> Enum.map(fn {key, val} ->
+        %{"x" => key, "y" => val}
+      end)
+
+    class_row =
+      data
+      |> Enum.find(fn row ->
+        row["x"] == "class"
+      end)
+
+    class = classes[class_row["y"]]
+
+    data =
+      data
+      |> Enum.reject(fn row ->
+        row["x"] == "class"
+      end)
+
+    VegaLite.new(width: 700, height: 400, title: class)
+    |> VegaLite.data_from_values(data)
+    |> VegaLite.mark(:bar)
+    |> VegaLite.encode_field(:x, "x", type: :nominal)
+    |> VegaLite.encode_field(:y, "y", type: :quantitative)
+  end)
+
+VegaLite.new(width: 700)
+|> VegaLite.concat(vega_concats, :vertical)
+```
+
+## Prepare the Data
+
+Now we need to get our data ready for training. First we will normalize our data using the min-max scaling technique. This will transform every value in each column to be between 0 and 1 and will facilitate the training of our model. Essentially if the different rows have diferent scales (one row is between 0 and 1 and another is between 40000 and 10000000) then the large scale data points will have more influence in the training of your model. You can read more about normalization [here](https://en.wikipedia.org/wiki/Feature_scaling).
+
+```elixir
+defmodule NormalData do
+  def normalize(data_frame, col_names) do
+    data_frame
+    |> Explorer.DataFrame.select(col_names)
+    |> Explorer.DataFrame.to_series()
+    |> Enum.map(fn {col_name, col} ->
+      max = Explorer.Series.max(col)
+      min = Explorer.Series.min(col)
+      range = max - min
+
+      normalize_fun = fn val ->
+        (val - min) / range
+      end
+
+      {col_name,
+       Explorer.Series.subtract(col, min)
+       |> Explorer.Series.cast(:float)
+       |> Explorer.Series.divide(range), normalize_fun}
+    end)
+  end
+end
+```
+
+Here we normalize the data and also construct a function to normalize any future data we get before we pass it to our model for a prediction.
+
+```elixir
+normal =
+  NormalData.normalize(
+    df,
+    ["Al", "Ba", "Ca", "Fe", "K", "Mg", "Na", "RI", "Si"]
+  )
+
+normal_df =
+  normal
+  |> Enum.map(fn {col_name, normalized_data, _normalize_fun} ->
+    {col_name, normalized_data}
+  end)
+  |> Explorer.DataFrame.new()
+  |> Explorer.DataFrame.mutate(id_number: Explorer.DataFrame.pull(df, "id_number"))
+  |> Explorer.DataFrame.mutate(class: Explorer.DataFrame.pull(df, "class"))
+
+normalize_row_fun = fn row ->
+  normalize_funs =
+    normal
+    |> Enum.filter(fn {col_name, _, _} ->
+      col_name in [
+        "Al",
+        "Ba",
+        "Ca",
+        "Fe",
+        "K",
+        "Mg",
+        "Na",
+        "RI",
+        "Si"
+      ]
+    end)
+    |> Enum.map(fn {_, _, normalize_fun} ->
+      normalize_fun
+    end)
+
+  Enum.zip([normalize_funs, Nx.to_flat_list(row)])
+  |> Enum.map(fn {normalize_fun, elem} ->
+    normalize_fun.(elem)
+  end)
+  |> Nx.tensor()
+end
+```
+
+Lets take a look at means of the normalized data to make sure everything is ok.
+
+```elixir
+mean_normal_data =
+  ReduceData.reduce_df(
+    normal_df
+    |> Explorer.DataFrame.select(["id_number", "class"], :drop),
+    &Explorer.Series.mean/1
+  )
+```
+
+```elixir
+VegaLite.new(width: 400, height: 400)
+|> VegaLite.data_from_values(mean_normal_data)
+|> VegaLite.mark(:bar)
+|> VegaLite.encode_field(:x, "x", type: :nominal)
+|> VegaLite.encode_field(:y, "y", type: :quantitative)
+```
+
+Now we will split our data into a training and testing set. This is a common machine learning technique. If we use all the data to train the model then we will have no way to evaluate it's performance. We could have overfitted the data and then get poor performance with new data. So we keep a smaller sample for testing.
+
+```elixir
+defmodule SplitData do
+  def train_test_split(data_frame, train_percentage) do
+    series = Explorer.DataFrame.pull(data_frame, "id_number")
+
+    train_sample =
+      series
+      |> Explorer.Series.sample(train_percentage)
+      |> Explorer.Series.to_list()
+
+    test_sample_df =
+      series
+      |> Explorer.Series.to_list()
+      |> Kernel.--(train_sample)
+      |> Kernel.then(fn list ->
+        Explorer.DataFrame.new(id_number: list)
+      end)
+
+    train_sample_df = Explorer.DataFrame.new(id_number: train_sample)
+
+    {Explorer.DataFrame.join(train_sample_df, data_frame),
+     Explorer.DataFrame.join(test_sample_df, data_frame)}
+  end
+end
+```
+
+```elixir
+{train_df, test_df} = SplitData.train_test_split(normal_df, 0.75)
+```
+
+Now that our data is split we need to convert it to something that can be used by an `Axon` model. for both the training and testing set we need to further split the data into inputs and outputs. We also need to one hot encode our outputs. Instead of a single `class` output (ex: 7) we need a vector that represents that number (ex: [0, 0, 0, 0, 0, 0, 1]). Our model will output probabilities for each class and then we can choose the class with the highest probability.
+
+```elixir
+defmodule Convert do
+  def to_training_data(df, col_names) do
+    col_names
+    |> Enum.map(fn name ->
+      df[name]
+      |> Explorer.Series.to_tensor(names: [name])
+      |> Nx.reshape({:auto, 1})
+    end)
+    |> Nx.concatenate(axis: 1)
+  end
+
+  def one_hot_encode(outputs) do
+    outputs
+    |> Nx.equal(Nx.tensor(Enum.to_list(1..7)))
+  end
+end
+```
+
+```elixir
+train_input_data =
+  train_df
+  |> Convert.to_training_data(["Al", "Ba", "Ca", "Fe", "K", "Mg", "Na", "RI", "Si"])
+  |> Nx.to_batched_list(32)
+
+train_output_data =
+  train_df
+  |> Convert.to_training_data(["class"])
+  |> Convert.one_hot_encode()
+  |> Nx.to_batched_list(32)
+
+test_input_data =
+  test_df
+  |> Convert.to_training_data(["Al", "Ba", "Ca", "Fe", "K", "Mg", "Na", "RI", "Si"])
+
+test_output_data =
+  test_df
+  |> Convert.to_training_data(["class"])
+  |> Convert.one_hot_encode()
+```
+
+Let's take a quick look at the first batch of training data to make sure its all good.
+
+```elixir
+train_input_data
+|> List.first()
+|> IO.inspect()
+|> Nx.to_heatmap()
+```
+
+## Model Creation
+
+Now we can create our Neural Network model. Our input will be batched so we leave the first dimension as nil in our `input` layer. Each input row in our training input set has 9 data points so the second dimension is 9. Next we add a 128 neuron `dense` layer with a `relu` activation. This function will ultimately decide whether or not a given neuron will fire or not. You can read more about this function [here](https://en.wikipedia.org/wiki/Rectifier_(neural_networks)). We then add a dropout layer with a rate of 0.2. This layer will randomly drop certain neurons during training at the rate specified. This helps to prevent overfitting and you can read more [here](https://machinelearningmastery.com/dropout-for-regularizing-deep-neural-networks/). We duplicate the above layers and just modifify the dropout rate. Finally we add a `dense` layer with 7 outputs representing the one hot encoded outputs we use for training. We use a softmax activation function since this is a multiclass classification problem. It will transform the output of your model into a vector of probabilities for each class. You can learn more about softmax [here](https://www.pinecone.io/learn/softmax-activation/).
+
+```elixir
+model =
+  Axon.input({nil, 9}, "input")
+  |> Axon.dense(128, activation: :relu)
+  |> Axon.dropout(rate: 0.2)
+  |> Axon.dense(128, activation: :relu)
+  |> Axon.dropout(rate: 0.1)
+  |> Axon.dense(7, activation: :softmax)
+```
+
+## Training and Evaluating the Model
+
+Now that we have our training and testing inputs and outputs we can run a training loop. `Axon` provides us a really nice api to do this. We create a trainer with a `catgorical_cross_entropy` loss function. This loss function is used for predicting the probability between several classes. We will also use the `adam` optimizer. We will print the accuracy and precision metric during training. Finally we run our model for 2000 epochs.
+
+```elixir
+params =
+  model
+  |> Axon.Loop.trainer(:categorical_cross_entropy, :adam)
+  |> Axon.Loop.metric(:accuracy)
+  |> Axon.Loop.metric(:precision)
+  |> Axon.Loop.run(Stream.zip(train_input_data, train_output_data), %{},
+    compiler: EXLA,
+    epochs: 2000
+  )
+```
+
+After training we can use the parameters or weights from our training run to make predictions on the test input data.
+
+```elixir
+%{prediction: prediction} = Axon.predict(model, params, test_input_data, mode: :train)
+```
+
+Now we can see the accuracy of our model. When I ran it I got around 0.77 accuracy. Not too bad!
+
+```elixir
+Axon.Metrics.accuracy(test_output_data, prediction)
+```
+
+```elixir
+defmodule Confusion do
+  def matrix(output, pred) do
+    true_pos = Axon.Metrics.true_positives(output, pred) |> Nx.to_number()
+    true_neg = Axon.Metrics.true_negatives(output, pred) |> Nx.to_number()
+    false_pos = Axon.Metrics.false_positives(output, pred) |> Nx.to_number()
+    false_neg = Axon.Metrics.false_negatives(output, pred) |> Nx.to_number()
+
+    [
+      %{"predicted" => "true", "ground truth" => "true", "val" => true_pos},
+      %{"predicted" => "false", "ground truth" => "false", "val" => true_neg},
+      %{"predicted" => "true", "ground truth" => "false", "val" => false_pos},
+      %{"predicted" => "false", "ground truth" => "true", "val" => false_neg}
+    ]
+  end
+end
+```
+
+Now let's form a confusion matrix
+
+```elixir
+confusion_matrix_data = Confusion.matrix(test_output_data, prediction)
+```
+
+```elixir
+VegaLite.new(width: 400, height: 400)
+|> VegaLite.data_from_values(confusion_matrix_data)
+|> VegaLite.encode_field(:x, "predicted", type: :nominal)
+|> VegaLite.encode_field(:y, "ground truth", type: :nominal)
+|> VegaLite.layers([
+  VegaLite.new()
+  |> VegaLite.mark(:rect)
+  |> VegaLite.encode_field(:color, "val", type: :quantitative),
+  VegaLite.new()
+  |> VegaLite.mark(:text)
+  |> VegaLite.encode_field(:text, "val", type: :quantitative)
+])
+```
+
+We can see that our true negatives and true positives are greater than our false negatives and false positives. Now we can calculate the precision and recall of the model. The `precision` is the ratio between the number of true positives to the sum of the true and false positives. The precision can tell us how reliable the model is a classifying a positive. The `recall` is the ratio between the true positives to the sum of the true positives and false negatives. It measures how many positives were correctly classified. You can read more about the precision, recall and the confusion matrix [here](https://blog.paperspace.com/deep-learning-metrics-precision-recall-accuracy/).
+
+```elixir
+pr_data =
+  [
+    %{
+      "name" => "precision",
+      "val" => Axon.Metrics.precision(test_output_data, prediction) |> Nx.to_number()
+    },
+    %{
+      "name" => "recall",
+      "val" => Axon.Metrics.recall(test_output_data, prediction) |> Nx.to_number()
+    }
+  ]
+  |> IO.inspect()
+
+VegaLite.new(width: 400, height: 400)
+|> VegaLite.data_from_values(pr_data)
+|> VegaLite.mark(:bar)
+|> VegaLite.encode_field(:x, "name", type: :nominal)
+|> VegaLite.encode_field(:y, "val", type: :quantitative)
+```
+
+Lets also form confusion matrices and precision/recall charts for each category. We can see that the model is more confident in some categories than others.
+
+```elixir
+test_output_data_list =
+  test_output_data
+  |> Nx.to_batched_list(1)
+
+test_input_data_list =
+  test_input_data
+  |> Nx.to_batched_list(1)
+
+vega_concats =
+  Enum.zip(test_output_data_list, test_input_data_list)
+  |> Enum.group_by(fn {output, _input} ->
+    output
+    |> Nx.argmax()
+    |> Nx.to_number()
+    |> Kernel.+(1)
+  end)
+  |> Enum.map(fn {class, data} ->
+    glass_type = classes[class]
+
+    {out, inp} = Enum.unzip(data)
+
+    outputs =
+      out
+      |> Enum.map(&Nx.to_flat_list/1)
+      |> Nx.tensor()
+
+    inputs =
+      inp
+      |> Enum.map(&Nx.to_flat_list/1)
+      |> Nx.tensor()
+
+    %{prediction: pred} = Axon.predict(model, params, inputs, mode: :train)
+    conf_matrix_data = Confusion.matrix(outputs, pred)
+
+    conf_matrix_chart =
+      VegaLite.new(width: 300, height: 400)
+      |> VegaLite.data_from_values(conf_matrix_data)
+      |> VegaLite.encode_field(:x, "predicted", type: :nominal)
+      |> VegaLite.encode_field(:y, "ground truth", type: :nominal)
+      |> VegaLite.layers([
+        VegaLite.new(title: glass_type)
+        |> VegaLite.mark(:rect)
+        |> VegaLite.encode_field(:color, "val", type: :quantitative),
+        VegaLite.new()
+        |> VegaLite.mark(:text)
+        |> VegaLite.encode_field(:text, "val", type: :quantitative)
+      ])
+
+    pr_data = [
+      %{
+        "name" => "precision",
+        "val" => Axon.Metrics.precision(outputs, pred) |> Nx.to_number()
+      },
+      %{
+        "name" => "recall",
+        "val" => Axon.Metrics.recall(outputs, pred) |> Nx.to_number()
+      }
+    ]
+
+    pr_chart =
+      VegaLite.new(width: 300, height: 400)
+      |> VegaLite.data_from_values(pr_data)
+      |> VegaLite.mark(:bar)
+      |> VegaLite.encode_field(:x, "name", type: :nominal)
+      |> VegaLite.encode_field(:y, "val", type: :quantitative)
+
+    VegaLite.new(width: 800)
+    |> VegaLite.concat([conf_matrix_chart, pr_chart])
+  end)
+
+VegaLite.new(width: 800)
+|> VegaLite.concat(vega_concats, :vertical)
+```
+
+Download this notebook [here](https://karangejo.com/notebooks/Classification_With_Axon_And_Livebook.livemd)
