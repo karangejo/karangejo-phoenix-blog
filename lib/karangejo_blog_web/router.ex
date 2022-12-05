@@ -20,9 +20,8 @@ defmodule KarangejoBlogWeb.Router do
     get "/about", PostController, :about
     get "/music", PostController, :music
 
-    resources "/posts", PostController, only: [:show]
+    resources "/posts", PostController, only: [:show], param: "name"
   end
-
 
   # Other scopes may use custom stacks.
   # scope "/api", KarangejoBlogWeb do

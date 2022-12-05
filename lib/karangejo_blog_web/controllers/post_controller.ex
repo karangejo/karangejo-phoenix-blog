@@ -34,8 +34,8 @@ defmodule KarangejoBlogWeb.PostController do
     end
   end
 
-  def show(conn, %{"id" => id}) do
-    post = Posts.get_post!(id)
+  def show(conn, %{"name" => name}) do
+    post = Posts.get_post_by_name(name)
     render(conn, "show.html", post: post)
   end
 
