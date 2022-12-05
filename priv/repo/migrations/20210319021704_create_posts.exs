@@ -8,6 +8,5 @@ defmodule KarangejoBlog.Repo.Migrations.CreatePosts do
 
       timestamps()
     end
-
   end
 end

@@ -6,5 +6,4 @@ defmodule KarangejoBlogWeb.LayoutView do
   def crab_svg do
     unquote(crab_svg)
   end
-
 end
