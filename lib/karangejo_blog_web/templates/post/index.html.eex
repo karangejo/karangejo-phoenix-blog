@@ -4,9 +4,8 @@
     <img src="/images/celtic/celtic9.png" alt="celtic symbol" class="dec-image">
 </div>
 <%= for post <- @posts do %>
-        <%= link post.name, to: Routes.post_path(@conn, :show, post) %>
+        <%= link post.name, to: Routes.post_path(@conn, :show, post.name) %>
 <% end %>
 <div class="row">
     <img src="/images/boats/boat-2027190.png" alt="sailboat" class="sail-boat">
 </div>
-

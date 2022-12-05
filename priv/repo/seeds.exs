@@ -16,17 +16,25 @@ alias KarangejoBlog.Repo
 Repo.delete_all(Post)
 
 files = Path.wildcard("./priv/repo/markdown/*.md")
-IO.inspect(System.cwd())
-IO.inspect(files)
+
 Enum.map(files, fn file ->
   case File.read(file) do
     {:ok, content} ->
-      post_name =
-        Path.basename(file)
-        |> String.replace(".md","")
-        |> String.replace("_"," ")
+      [date_base, file_name] = String.split(file, "|")
 
-      Repo.insert!(%Post{name: post_name, content: content})
+      date =
+        date_base
+        |> String.replace("priv/repo/markdown/", "")
+        |> Date.from_iso8601!()
+
+      post_name =
+        Path.basename(file_name)
+        |> String.replace(".md", "")
+        |> String.replace("_", " ")
+        |> String.trim()
+
+      Repo.insert!(%Post{name: post_name, content: content, date: date})
+
     _ ->
       IO.puts("could not insert file : " ++ file)
   end

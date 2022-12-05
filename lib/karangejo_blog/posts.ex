@@ -18,7 +18,9 @@ defmodule KarangejoBlog.Posts do
 
   """
   def list_posts do
-    Repo.all(Post)
+    Post
+    |> order_by([p], desc: p.date)
+    |> Repo.all()
   end
 
   @doc """
@@ -36,6 +38,12 @@ defmodule KarangejoBlog.Posts do
 
   """
   def get_post!(id), do: Repo.get!(Post, id)
+
+  def get_post_by_name(name) do
+    Post
+    |> where([p], p.name == ^name)
+    |> Repo.one!()
+  end
 
   @doc """
   Creates a post.
